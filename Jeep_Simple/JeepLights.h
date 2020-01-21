@@ -3,7 +3,9 @@
 #define SPOTR_PIN 33
 #define FOGFL_PIN 26
 #define FOGFR_PIN 25
-#define NUM_LIGHTS 4
+#define FOGBL_PIN 14
+#define FOGBR_PIN 15
+#define NUM_LIGHTS 6
 #define NUM_FOGS 2
 #define NUM_SPOTS 2
 
@@ -30,6 +32,9 @@ class Light
     unsigned long nextOff = 0;
 
     uint8_t cycleMode();
+    uint8_t turnOff();
+    uint8_t turnOn();
+
 };
 
 
@@ -47,6 +52,49 @@ uint8_t Light::cycleMode()
     this->curMode++;
     return this->curMode;
   }
+}
+
+uint8_t Light::turnOff()
+{
+  Serial.print("Turning off: ");
+  Serial.println(this->id);
+  if (this->lastOff + this->minOn > millis())
+  {
+      Serial.println("Not time yet...");
+      return this->curMode;
+  }
+  digitalWrite(this->pin, LOW);
+  this->lastOn = millis();
+  this->curMode = 0;
+  Serial.println("Done");
+  return this->curMode;
+}
+
+uint8_t Light::turnOn()
+{
+  Serial.print("Turning on: ");
+  Serial.println(this->id);
+  if (this->lastOn + this->minOff > millis())
+  {
+    Serial.println("Not time yet...");
+    return this->curMode;
+  }
+//  this->prevMode = this->curMode;   ////this should be done before calling, in callback?
+  digitalWrite(this->pin, HIGH);
+  this->lastOff = millis();
+  Serial.println("Done");
+
+  if ( this->lastOn + this->maxOff < millis() )
+  {
+    this->curMode = 1;
+    Serial.println("Mode timed out and reset to 1");
+  }
+  else
+  {
+    this->curMode++;
+  }
+//  this->pendingMode = -1;   ////this should be handled in check
+  return this->curMode;
 }
 
 class FogMM : public Light
