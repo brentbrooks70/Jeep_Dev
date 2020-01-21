@@ -6,7 +6,7 @@
 #define FOGBL_PIN 14
 #define FOGBR_PIN 15
 #define NUM_LIGHTS 6
-#define NUM_FOGS 2
+#define NUM_FOGS 4
 #define NUM_SPOTS 2
 
 uint8_t lightCount = 0;
@@ -44,16 +44,13 @@ uint8_t Light::cycleMode()
   {
     digitalWrite(this->pin, LOW);
     this->lastOn = millis();
-    delay(this->minOff);      ////NEED TO REMOVE-use nextOn and test for it?!?!
-  }  //If on last mode, next mode is off, which we just did so return as such
-  if (this->curMode == this->numbModes) {this->curMode=0;   return this->curMode;}
-  else
-  {  //Else turn on next mode, increment mode and return
-    digitalWrite(this->pin, HIGH);
-    this->lastOff = millis();
-    this->curMode++;
-    return this->curMode;
-  }
+    delay(this->minOff);      ////BLOCKING-NEED TO REMOVE-use nextOn and test for it?!?!
+  }  //If on last mode, wrap back to begining (0 as it will get incremented to 1 below)
+  if (this->curMode == this->numbModes) {this->curMode=0;}
+  digitalWrite(this->pin, HIGH);  //Turn on next mode, increment mode and return
+  this->lastOff = millis();
+  this->curMode++;
+  return this->curMode;
 }
 
 uint8_t Light::turnOff()
@@ -67,6 +64,7 @@ uint8_t Light::turnOff()
   }
   digitalWrite(this->pin, LOW);
   this->lastOn = millis();
+  this->lastOff = 0;
   this->curMode = 0;
   Serial.println("Done");
   return this->curMode;
@@ -84,12 +82,13 @@ uint8_t Light::turnOn()
 //  this->prevMode = this->curMode;   ////this should be done before calling, in callback?
   digitalWrite(this->pin, HIGH);
   this->lastOff = millis();
+  this->lastOn = 0;
   Serial.println("Done");
 
   if ( this->lastOn + this->maxOff < millis() )
   {
     this->curMode = 1;
-    Serial.println("Mode timed out and reset to 1");
+    Serial.println("Mode timed out and reset to 0");
   }
   else
   {

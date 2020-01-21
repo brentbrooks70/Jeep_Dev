@@ -25,6 +25,9 @@ void btnFogF_PopCallback(void *ptr)
   if (n1==n2)       //if both lights agree on same mode...
   {
     btnFogF.Set_background_crop_picc(n1);  //Set button backgrnd to curMode
+    uint32_t ds;
+    dsFogF.getValue(&ds);
+    if (!ds) { dsFogF.setValue(1); }
   }
   else
   {
