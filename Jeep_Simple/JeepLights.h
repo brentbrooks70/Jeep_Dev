@@ -23,9 +23,9 @@ class Light
     uint8_t curMode = 0;        //0=Off, [FogMM: 1=White, 2=Amber, 3=AmbWhi, 4=WhiStrobe, 5=AmbStrobe, 6=AmbWhiStrobe], [Spot: 1=On]
     uint8_t prevMode = 0;       //To store current mode (Return from int/overide functions or testing prev state for....)
     int8_t pendingMode = -1;     //Next mode to run -1 = no change
-    uint16_t minOff = 30;        //Minimum time off to change mode
-    uint16_t maxOff = 3300;        //Maximum time off to change mode before reset to mode 1
-    uint16_t minOn = 90;         //Minimum time on to qualify as a "cycle"
+    uint32_t minOff;        //Minimum time off to change mode
+    uint16_t maxOff;        //Maximum time off to change mode before reset to mode 1
+    uint32_t minOn;         //Minimum time on to qualify as a "cycle"
     unsigned long lastOn = 0;   //millis() of last time it was turned off, maybe use NTP | RTC and timestamp
     unsigned long lastOff = 0;   //millis() of last time it was turned on, maybe use NTP | RTC and timestamp
     unsigned long nextOn = 0;   //millis() or RTC for next on cycle, used for overrides only
@@ -43,12 +43,14 @@ uint8_t Light::cycleMode()
   if (this->curMode)  //If the light is on, turn it off first
   {
     digitalWrite(this->pin, LOW);
-    delay(this->minOff);
+    this->lastOn = millis();
+    delay(this->minOff);      ////NEED TO REMOVE-use nextOn and test for it?!?!
   }  //If on last mode, next mode is off, which we just did so return as such
   if (this->curMode == this->numbModes) {this->curMode=0;   return this->curMode;}
   else
   {  //Else turn on next mode, increment mode and return
     digitalWrite(this->pin, HIGH);
+    this->lastOff = millis();
     this->curMode++;
     return this->curMode;
   }
@@ -108,6 +110,9 @@ FogMM::FogMM(uint8_t id, uint8_t pin, uint8_t numbModes)
   this->numbModes = numbModes;
   this->id = id;
   this->pin = pin;
+  this->minOn = 90;
+  this->minOff = 30;
+  this->maxOff = 3300;
   pinMode(pin, OUTPUT);
 }
 
@@ -123,5 +128,8 @@ Spot::Spot(uint8_t id, uint8_t pin, uint8_t numbModes)
   this->numbModes = numbModes;
   this->id = id;
   this->pin = pin;
+  this->minOn = 500;
+  this->minOff = 500;
+  this->maxOff = 10;
   pinMode(pin, OUTPUT);
 }

@@ -6,11 +6,13 @@ NexButton btnFogB = NexButton(0, 5, "btnFogB");
 NexDSButton dsFogF = NexDSButton(0, 6, "dsFogF");
 NexDSButton dsSpot = NexDSButton(0, 7, "dsSpot");
 NexDSButton dsFogB = NexDSButton(0, 8, "dsFogB");
+NexSlider slSpeed = NexSlider(0, 9, "slSpeed");
 
 NexTouch *nex_listen_list[] = 
 {
     &btnFogF, &btnSpot, &btnFogB,
     &dsFogF, &dsSpot, &dsFogB,
+    &slSpeed,
     NULL
 };
 
@@ -127,8 +129,16 @@ void dsFogB_PopCallback(void *ptr)
   dbSerialPrintln(ds);
 }
 
-
-
+void slSpeed_PopCallback(void *ptr)
+{
+    dbSerialPrint("slSpeed_PopCallback ");
+    uint32_t number = 0;
+    slSpeed.getValue(&number);
+    SpotR.minOn = 
+//    char temp[10] = {0};
+//    utoa(number, temp, 10);
+    dbSerialPrintln(number);
+}
 
 void setup_Nex()
 {
@@ -139,4 +149,5 @@ void setup_Nex()
   dsFogF.attachPop(dsFogF_PopCallback, &dsFogF);
   dsSpot.attachPop(dsSpot_PopCallback, &dsSpot);
   dsFogB.attachPop(dsFogB_PopCallback, &dsFogB);
+  slSpeed.attachPop(slSpeed_PopCallback, &slSpeed);
 }
