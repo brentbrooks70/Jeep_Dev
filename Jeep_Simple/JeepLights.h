@@ -22,6 +22,7 @@ class Light
     uint8_t numbModes;      //How many built-in modes (i.e. 6 for FogMM or 1 for Spot)not including custom overrides (i.e. Hazzards, Turn Signals, Reverse, etc.)
     uint8_t curMode = 0;        //0=Off, [FogMM: 1=White, 2=Amber, 3=AmbWhi, 4=WhiStrobe, 5=AmbStrobe, 6=AmbWhiStrobe], [Spot: 1=On]
     uint8_t prevMode = 0;       //To store current mode (Return from int/overide functions or testing prev state for....)
+    uint8_t defMode = 1;
     int8_t pendingMode = -1;     //Next mode to run -1 = no change
     uint32_t minOff;        //Minimum time off to change mode
     uint16_t maxOff;        //Maximum time off to change mode before reset to mode 1
@@ -101,14 +102,15 @@ uint8_t Light::turnOn()
 class FogMM : public Light
 {
   public:
-    FogMM(uint8_t id, uint8_t pin, uint8_t numbModes);
+    FogMM(uint8_t id, uint8_t pin, uint8_t numbModes, uint8_t defMode);
 };
 
-FogMM::FogMM(uint8_t id, uint8_t pin, uint8_t numbModes) 
+FogMM::FogMM(uint8_t id, uint8_t pin, uint8_t numbModes, uint8_t defMode) 
 {
   this->numbModes = numbModes;
   this->id = id;
   this->pin = pin;
+  this->defMode = defMode;
   this->minOn = 90;
   this->minOff = 30;
   this->maxOff = 3300;
