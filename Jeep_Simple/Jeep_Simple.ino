@@ -1,4 +1,4 @@
-#define Ver "0.0.3dev"
+#define Ver "0.0.3"
 
 #include "JeepLights.h"
 #include "Next-Info.h"
