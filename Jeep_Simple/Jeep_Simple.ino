@@ -15,6 +15,8 @@ void loop()
   nexLoop(nex_listen_list);
   for (int i = 0; i < NUM_LIGHTS; i++)
   {
-    Lights[i].
+    Lights[i].srvMain();
   }
+  FogFR.srvMain();
+  FogFL.srvMain();
 }

@@ -20,27 +20,33 @@ NexTouch *nex_listen_list[] =
 void btnFogF_PopCallback(void *ptr)
 {
   dbSerialPrint("btnFogF_PopCallback ");
-  FogFR.cycleMode();
-  FogFL.cycleMode();
-  btnFogF.Set_background_crop_picc(FogFL.curMode);  //Set button backgrnd to curMode
+//  FogFR.cycleMode();
+//  FogFL.cycleMode();
+  FogFR.pendingMode = FogFR.curMode + 1;
+  FogFL.pendingMode = FogFL.curMode + 1;
+  btnFogF.Set_background_crop_picc(FogFL.pendingMode);  //Set button backgrnd to curMode
   dsFogF.setValue(1);
 }
 
 void btnSpot_PopCallback(void *ptr)    
 {
   dbSerialPrint("btnSpot_PopCallback ");
-  SpotR.cycleMode();
-  SpotL.cycleMode();
-  btnSpot.Set_background_crop_picc(SpotR.curMode);   //Set button backgrnd to curMode
+//  SpotR.cycleMode();
+//  SpotL.cycleMode();
+  SpotR.pendingMode = SpotR.curMode + 1;
+  SpotL.pendingMode = SpotL.curMode + 1;
+  btnSpot.Set_background_crop_picc(SpotR.pendingMode);   //Set button backgrnd to curMode
   dsSpot.setValue(1);
 }
 
 void btnFogB_PopCallback(void *ptr)
 {
   dbSerialPrint("btnFogB_PopCallback ");
-  FogBR.cycleMode();
-  FogBL.cycleMode();
-  btnFogB.Set_background_crop_picc(FogBL.curMode);  //Set button backgrnd to curMode
+//  FogBR.cycleMode();
+//  FogBL.cycleMode();
+  FogBR.pendingMode = FogBR.curMode + 1;
+  FogBL.pendingMode = FogBL.curMode + 1;
+  btnFogB.Set_background_crop_picc(FogBL.pendingMode);  //Set button backgrnd to curMode
   dsFogB.setValue(1);
 }
 
@@ -49,21 +55,23 @@ void dsFogF_PopCallback(void *ptr)
   dbSerialPrint("dsFogF_PopCallback ");
   uint32_t ds;
   dsFogF.getValue(&ds);
-  if (ds)       //if lights are on...
+  if (ds == 1)       //if lights are on...
   {
-
-    FogFR.turnOn();
-    FogFL.turnOn();
-    delay(FogFL.minOn);
-    FogFR.cycleMode();
-    FogFL.cycleMode();
+      FogFR.pendingMode = FogFR.defMode;
+      FogFL.pendingMode = FogFL.defMode;
+//    FogFR.turnOn();
+//    FogFL.turnOn();
+//    delay(FogFL.minOn);
+//    FogFR.cycleMode();
+//    FogFL.cycleMode();
   }
   else
   {
-    FogFR.turnOff();
-    FogFL.turnOff();
+  FogFR.pendingMode = 0;
+  FogFL.pendingMode = 0;
   }
-  btnFogF.Set_background_crop_picc(FogFL.curMode);  //Set button backgrnd to Amber (initial mode for MM!?!)
+  Serial.println(FogFL.pendingMode);
+  btnFogF.Set_background_crop_picc(FogFL.pendingMode);  //Set button backgrnd to Amber (initial mode for MM!?!)
 }
 
 void dsSpot_PopCallback(void *ptr)    
@@ -71,17 +79,19 @@ void dsSpot_PopCallback(void *ptr)
   dbSerialPrint("dsSpot_PopCallback ");
   uint32_t ds;
   dsSpot.getValue(&ds);
-  if (ds)       //if lights are on...
+  if (ds == 1)       //if lights are on...
   {
-    SpotR.turnOn();
-    SpotL.turnOn();
+    SpotR.pendingMode = SpotR.defMode;
+    SpotL.pendingMode = SpotR.defMode;
+//    SpotR.turnOn();
+//    SpotL.turnOn();
   }
   else
   {
-    SpotR.turnOff();
-    SpotL.turnOff();
+    SpotR.pendingMode = 0;
+    SpotL.pendingMode = 0;
   }
-  btnSpot.Set_background_crop_picc(SpotL.curMode);   //Set button backgrnd to curMode
+  btnSpot.Set_background_crop_picc(SpotL.pendingMode);   //Set button backgrnd to curMode
 }
 
 void dsFogB_PopCallback(void *ptr)
@@ -89,20 +99,24 @@ void dsFogB_PopCallback(void *ptr)
   dbSerialPrint("dsFogB_PopCallback ");
   uint32_t ds;
   dsFogB.getValue(&ds);
-  if (ds)       //if lights are on...
+  if (ds == 1)       //if lights are on...
   {
-    FogBR.turnOn();
-    FogBL.turnOn();
-    delay(FogBL.minOn);
-    FogBR.cycleMode();
-    FogBL.cycleMode();
+    FogBR.pendingMode = FogBR.defMode;
+    FogBL.pendingMode = FogBL.defMode;
+//    FogBR.turnOn();
+//    FogBL.turnOn();
+//    delay(FogBL.minOn);
+//    FogBR.cycleMode();
+//    FogBL.cycleMode();
   }
   else
   {
-    FogBR.turnOff();
-    FogBL.turnOff();
+    FogBR.pendingMode = 0;
+    FogBL.pendingMode = 0;
+//    FogBR.turnOff();
+//    FogBL.turnOff();
   }
-  btnFogB.Set_background_crop_picc(FogBL.curMode);  //Set button backgrnd to Amber (initial mode for MM!?!)
+  btnFogB.Set_background_crop_picc(FogBL.pendingMode);  //Set button backgrnd to Amber (initial mode for MM!?!)
 }
 
 void h1_PopCallback(void *ptr)

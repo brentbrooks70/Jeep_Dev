@@ -1,6 +1,6 @@
 #include <Arduino.h>
 
-///*  ---Define --- */
+/*  ---Define Relay States--- */
 #define RLY_ON HIGH
 #define RLY_OFF LOW
 
@@ -12,8 +12,8 @@
 #define FOGBL_PIN 14
 #define FOGBR_PIN 15
 #define NUM_LIGHTS 6
-#define NUM_FOGS 4
-#define NUM_SPOTS 2
+//#define NUM_FOGS 4
+//#define NUM_SPOTS 2
 
 
 class Light
@@ -32,55 +32,86 @@ class Light
     uint32_t minOff;            //Minimum time off to change mode
     uint16_t maxOff;            //Maximum time off to change mode before reset to mode 1
     uint32_t minOn;             //Minimum time on to qualify as a "cycle"
+    bool isCycling = false;     //Is the current light in the act of cycling between modes
+    uint8_t pendingCycles = 0;  //How modes are left to cycle through
     unsigned long lastOn = 0;   //millis() of last time it was turned off, maybe use NTP | RTC and timestamp
     unsigned long lastOff = 0;  //millis() of last time it was turned on, maybe use NTP | RTC and timestamp
     unsigned long nextOn = 0;   //millis() or RTC for next on cycle, used for cycling and maybe overrides only
     unsigned long nextOff = 0;  //millis() or RTC for next off cycle, used for cycling and maybe overrides only
-    bool isCycling = false;     //Is the current light in the act of cycling between modes
-    uint8_t pendingCycles = 0;  //How modes are left to cycle through
     
     bool checkReset();          //This will test if the maxOff time has elapsed = true
     bool checkTimes();          //This should return true if the appropriate minOff or minOn time has elaped
     uint8_t cycleMode();
     uint8_t turnOff();
     uint8_t turnOn();
+    void srvRelay();
+    void srvMain();
 
 };
 
 bool Light::checkReset()        //This will test if the maxOff time has elapsed = true
 {
-  if ((this->lastOn + this->maxOff) < millis())
-    return true;
+  if (this->lastOn > 0)
+  {
+    Serial.print("Check Reset: ");
+    if ((this->lastOn + this->maxOff) < millis())
+    {
+      Serial.println("TRUE");
+      return true;
+    }
+    else
+    {
+      Serial.println("FALSE");
+      return false;
+    }
+  }
   else
+  {
     return false;
+  }
 }
 
 bool Light::checkTimes()        //This should return true if the appropriate minOff or minOn time has elaped
 {
-  if (!this->lastOff && !this->lastOn)    //SHOULD ONLY BE POSSIBLE IF JUST STARTED AND HAD NOT BEEN ON YET & never after EEPROM/Preferences
+  Serial.print("Check Times: ");
+  if (this->lastOff == 0 && this->lastOn == 0)    //SHOULD ONLY BE POSSIBLE IF JUST STARTED AND HAD NOT BEEN ON YET & never after EEPROM/Preferences
+  {
+    Serial.println("Passed with TWO OFFS!!");
+    return true;
+  }
+  else if (this->lastOff > 0 && this->lastOn == 0)
+  {
+    if ( (this->lastOff + this->minOn) < millis() )
     {
-      Serial.println("First time turned on?? Checked time passed with TWO OFFS!!");
+      Serial.println("Passed minOn");
       return true;
     }
-  else if (this->lastOff && !this->lastOn)
-  {
-    if ((this->lastOff + this->minOn) < millis())
-      return true;
     else
+    {
+      Serial.println("Failed minOn");
       return false;
+    }
   }
-  else if (this->lastOn && !this->lastOff)
+  else if (this->lastOn > 0 && this->lastOff == 0)
   {
     if ((this->lastOn + this->minOff) < millis())
+    {
+      Serial.println("Passed minOff");
       return true;
+    }
     else
+    {
+      Serial.println("Failed minOff");
       return false;
+    }
   }
   else
   {
-    Serial.println("Checked time FAILED with TWO ONS!!");
+    Serial.println("******FAILED with TWO ONS!!");
     return false;
   }
+//  Serial.println("******FAILED BY FALLING THROUGH TO BOTTOM!!");
+//  return false;
 }
 
 uint8_t Light::cycleMode()
@@ -102,16 +133,18 @@ uint8_t Light::turnOff()
 {
   Serial.print("Turning off: ");
   Serial.println(this->id);
-  if (checkTimes() == false)
-  {
-      Serial.println(" - Not time yet...");
-      return this->curMode;
-  }
+//  if (checkTimes() == false)
+//  {
+//      Serial.println(" - Not time yet...");
+//      return this->curMode;
+//  }
   digitalWrite(this->pin, RLY_OFF);
   this->lastOn = millis();
   this->lastOff = 0;
-  this->curMode = 0;
-  Serial.println("Done");
+    if (isCycling == false)
+  {
+    this->curMode = 0;
+  }Serial.println("Done");
   return this->curMode;
 }
 
@@ -119,28 +152,87 @@ uint8_t Light::turnOn()
 {
   Serial.print("Turning on: ");
   Serial.println(this->id);
-  if (this->lastOn + this->minOff > millis())
-  {
-    Serial.println("Not time yet...");
-    return this->curMode;
-  }
-//  this->prevMode = this->curMode;   ////this should be done before calling, in callback?
+//  if (checkTimes() == false)
+//  {
+//    Serial.println("Not time yet...");
+//    return this->curMode;
+//  }
   digitalWrite(this->pin, RLY_ON);
   this->lastOff = millis();
   this->lastOn = 0;
   Serial.println("Done");
+  this->curMode++;
+  return this->curMode;
+}
 
-  if ( this->lastOn + this->maxOff < millis() )
+void Light::srvRelay()
+{
+  if (this->nextOn > 0 && this->checkTimes() == true) 
   {
-    this->curMode = 1;
-    Serial.println("Mode timed out and reset to 0");
+    this->turnOn();
+    this->pendingCycles--;
+    if (this->curMode != this->pendingMode)
+    {
+      this->nextOff = this->lastOff + this->minOn;
+    }
+    else if (this->pendingCycles ==0)
+    {
+      this->isCycling = false;
+    }
+  }
+  if (this->nextOff > 0 && this->checkTimes() == true) 
+  {
+    this->turnOff();
+    this->nextOn = this->lastOn + this->minOff;
+  }
+}
+
+void Light::srvMain()
+{
+  if (isCycling == true)
+  {
+    Serial.print("Cycling: ");
+    Serial.print(this->id);
+    this->srvRelay();
+    return;
+  }
+  if (this->pendingMode == -1)    //Nothing to do here...except
+  {
+    if (this->curMode == 0 && checkReset())   //if off and been off long enoughto reset mode
+    {
+      Serial.println("Mode timed out & reset to 1");
+      this->prevMode = this->defMode;
+    }
+  }
+  else if (this->pendingMode == 0)     //Turn OFF
+  {
+    Serial.println("Case 0");
+    this->prevMode = this->curMode;
+    if (checkTimes())
+    {
+      this->turnOff();
+      this->pendingMode = -1;
+    }
   }
   else
   {
-    this->curMode++;
+    this->isCycling = true;
+    Serial.print("Light: ");
+    Serial.print(this->id);
+    Serial.print(" is cycling ");
+    if (this->curMode < this->pendingMode)
+    {
+      
+      this->pendingCycles = this->pendingMode - this->curMode;
+    }
+    else
+    {
+      this->pendingCycles = (this->numbModes - this->curMode) + (this->numbModes - this->pendingMode);
+    }
+    Serial.print(this->pendingCycles);
+    Serial.println(" cycles.");
+    this->nextOn = this->lastOn + this->minOff;
   }
-//  this->pendingMode = -1;   ////this should be handled in check
-  return this->curMode;
 }
 
 class FogMM : public Light
@@ -185,5 +277,5 @@ Spot SpotR(3, SPOTR_PIN, 5);      /*(id, pin, numbModes)*/
 FogMM FogBL(4, FOGBL_PIN, 6, 2);  /*(id, pin, numbModes, defMode)*/
 FogMM FogBR(5, FOGBR_PIN, 6, 2);  /*(id, pin, numbModes, defMode)*/
 Light Lights[NUM_LIGHTS]={FogFL, FogFR, SpotR, SpotL, FogBR, FogBL};
-Light Fogs[NUM_FOGS]={FogFL, FogFR, FogBR, FogBL};
-Light Spots[NUM_SPOTS]={SpotR, SpotL};
+//Light Fogs[NUM_FOGS]={FogFL, FogFR, FogBR, FogBL};
+//Light Spots[NUM_SPOTS]={SpotR, SpotL};
